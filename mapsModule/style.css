@@ -1,0 +1,17 @@
+#map1{
+  display: inline-block;
+  left:0%;
+  top:0;
+  width: 49vw;
+  height: 150vh;
+  margin: 0px;
+  float:left;
+}
+#map2{
+  display: inline-block;
+  top:0;
+  width: 49vw;
+  height: 150vh;
+  margin: 0px;
+  float: right;
+}
