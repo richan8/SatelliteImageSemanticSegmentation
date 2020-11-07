@@ -6,94 +6,171 @@ from PIL import ImageFilter #PIL.Image.filter(ImageFilter.MinFilter(3))
 from PIL import ImageEnhance
 import os
 import cv2
+import random
 
 #### Global Vars
 inputImgsDir = 'data/raw/imgs'
 inputLabelsDir = 'data/raw/labels'
+outputImgsDir = 'data/final/imgs'
+outputLabelsDir = 'data/final/labels'
 
 outputDir = 'data/final'
 
-imgNames = os.listdir(inputImgsDir)
-labelNames = os.listdir(inputLabelsDir)
+imgNames = sorted(os.listdir(inputImgsDir))
+labelNames = sorted(os.listdir(inputLabelsDir))
 
-im = Image.open(inputLabelsDir+'/'+labelNames[0])
-im = np.array(im)
+def processLabel(imgDir,labelDir):
+    ## Images are in BGR
+    im = cv2.imread(labelDir)
+    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
 
-### BUILDINGS
-buildingMask = np.logical_and(im[:,:,2]>100, im[:,:,2]<250)
-buildings = np.zeros([im.shape[0],im.shape[1]],dtype=np.uint8)
-buildings.fill(255)
-buildings[buildingMask] = 128
+    ### Buildings
+    buildingMask = np.logical_and(im[:,:,2]>100, im[:,:,2]<250)
+    buildings = np.zeros([im.shape[0],im.shape[1]],dtype=np.uint8)
+    buildings.fill(0)
+    buildings[buildingMask] = 255
 
-buildings = Image.fromarray(buildings)
-buildings = buildings.filter(ImageFilter.MaxFilter(3))
-buildings = buildings.filter(ImageFilter.MinFilter(5))
-buildings = np.array(buildings)
+    buildings = Image.fromarray(buildings)
+    # Removes Noise
+    buildings = buildings.filter(ImageFilter.MinFilter(3))
+    buildings = buildings.filter(ImageFilter.MaxFilter(5))
+    buildings = np.array(buildings)
 
-### ROADS
-roadMask = im[:,:,2]<100
-roads = np.zeros([im.shape[0],im.shape[1]],dtype=np.uint8)
-roads.fill(255)
-roads[roadMask] = 0
+    # Creating the final mask
+    buildingMask = buildings>0
 
-roads = Image.fromarray(roads)
-roads = roads.filter(ImageFilter.MinFilter(3))
-roads = np.array(roads)
+    ### Roads
+    roadMask = im[:,:,2]<100
+    roads = np.zeros([im.shape[0],im.shape[1]],dtype=np.uint8)
+    roads.fill(0)
+    roads[roadMask] = 255
 
-### VEGETATION
-## USING
-'''
-rawImg = Image.open(inputImgsDir+'/'+imgNames[0])
-rawImg = ImageEnhance.Color(rawImg).enhance(3)
-rawImg.show()
-rawImg = np.array(rawImg)
+    roads = Image.fromarray(roads)
+    ## Removes any really thin roads
+    ## This thin roads are most often invisible paths that go through car parks etc.
+    ## It is best we avoid these
+    roads = roads.filter(ImageFilter.MinFilter(7))
+    roads = roads.filter(ImageFilter.MaxFilter(11))
+    roads = np.array(roads)
 
-vegetation = np.zeros([im.shape[0],im.shape[1]],dtype=np.int16)
-#vegetation = (2*rawImg[:,:,1])/(rawImg[:,:,0]+rawImg[:,:,2])
+    # Creating the final mask
+    roadMask = roads>0
 
-print(vegetation)
-print(np.min(vegetation))
-print(np.max(vegetation))
+    ### VEGETATION
+    img = cv2.imread(imgDir)
+    PILImg = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    img = np.array(ImageEnhance.Color(PILImg).enhance(2))
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 
-vegetation = Image.fromarray(vegetation*128)
-vegetation.show()
-'''
+    # Thresholding HSV values to get pixels with vegetation
+    # Took alot of time to perfect but finally it works great
+    sensitivity = 30
+    midH = 50
+    startS = 50
+    endS = 255
+    startV = 0
+    endV = 255
+    mask = cv2.inRange(hsv, (midH-sensitivity, startS, startV), (midH+sensitivity, endS, endV))
+    
+    # Smoothing
+    mask = np.array(Image.fromarray(mask).filter(ImageFilter.MinFilter(5)))
+    mask = np.array(Image.fromarray(mask).filter(ImageFilter.MaxFilter(7)))
+    
+    # Creating the final mask
+    vegetationMask = mask>0
 
-'''
-## USING CV2 HSVs
-im = cv2.imread(inputImgsDir+'/'+imgNames[0])
-cv2.imshow('image',im)
-cv2.waitKey(0)
+    ### Combining all masks into one image
+    res = np.zeros([im.shape[0],im.shape[1]],dtype=np.int16)
+    res.fill(0)
+    res[roadMask] = 84
+    res[buildingMask] = 255
+    res[vegetationMask] = 132
 
-hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
-cv2.imshow('HSV',hsv)
-cv2.waitKey(0)
+    # Largest Filter applied is size 11 which means we need a minimum 5 pixels of padding.
+    # Therefore the label and image are cropped by 5 px
+    res = res[5:res.shape[0]-5,5:res.shape[1]-5]
 
-#mask = cv2.inRange(hsv, (36, 0, 0), (86, 255,255))
-#imgMask = mask>0
+    return(res)
 
-#vegetation = np.zeros([img.shape[0],img.shape[1]],dtype=np.uint8)
-#vegetation[imgMask] = 255
-#cv2.imshow('test',vegetation)
-#cv2.waitKey(0)
+def processImg(imgDir):
+    ## IMAGES ARE READ IN BGR
+    im = cv2.imread(imgDir)
 
-vegetationMask = np.logical_and(hsv[:,:,0]>95, hsv[:,:,0]<175)
-vegetationMask = np.logical_and(vegetationMask, hsv[:,:,1]>50)
-vegetationMask = np.logical_and(vegetationMask, hsv[:,:,2]>20)
-vegetation = np.zeros([im.shape[0],im.shape[1]],dtype=np.uint8)
-vegetation[vegetationMask] = 255
-cv2.imshow('Vegetation',vegetation)
-cv2.waitKey(0)
+    # Filter size 11 applied in label which means we need a 5 pixel padding.
+    # Therefore the label and image are cropped by 5 px
+    im = im[5:im.shape[0]-5,5:im.shape[1]-5,:]
+    return(im)
 
-'''
-### COMBINING THE 2
-res = np.zeros([im.shape[0],im.shape[1]],dtype=np.int16)
-res.fill(255)
-res[buildings==128] = 128
-res[roads==0] = 0
-#res[vegetation] = 64
-#print(res.shape)
-#res = Image.fromarray(res)
-#res.show()
-#print(res)
-cv2.imwrite('test.png', res)
+### Augumentation 
+# It's optimized for square images since they are already available to us.
+
+# Returns flips of all images in the list
+def flips(imgs):
+    res = []
+    for img in imgs:
+        res.extend([
+            img,
+            cv2.flip(img, flipCode=0),
+            cv2.flip(img, flipCode=1),
+            cv2.flip(img, flipCode=-1)
+        ])
+    return(res)
+
+# Returns n random rotations of a center slice
+def rotations(img, rotationList):
+    m = int((img.shape[0])/4)
+    n = int((img.shape[0])/2)
+
+    res = []
+    for rot in rotationList:
+        res.append(np.array(Image.fromarray(img).rotate(rot))[m:m+n,m:m+n])
+
+    return(res)
+
+# Returns quarter size slices
+def slices(img):
+    n = int((img.shape[0])/2)
+    return([
+        img[0:n,0:n],
+        img[0:n,n:],
+        img[n:,0:n],
+        img[n:,n:]
+    ])
+
+# Applies all above augumentations to Image 
+def augument(img, rotationList):
+    res = []
+    res.extend(slices(img))
+    res.extend(rotations(img, rotationList))
+    res.extend(flips(res))
+    return(res)
+
+# Safety check before running the Augumentation
+if(len(imgNames) != len(labelNames) or len(imgNames) == 0):
+    print('Image/label length mismatch')
+
+pairIndex = 0
+for imgName,labelName in zip(imgNames,labelNames):
+    imgDir = inputImgsDir+'/'+imgName
+    labelDir = inputLabelsDir+'/'+labelName
+
+    img = processImg(imgDir)
+    label = processLabel(imgDir, labelDir)
+
+    # Generating random rotation list to augument labels and images.
+    numRotations = 32
+    rotationList = [random.randint(0,360) for _ in range(numRotations)]
+
+    for i,img in enumerate(augument(img, rotationList)):
+        cv2.imwrite(outputImgsDir+'/'+'img-%i-%i.jpeg'%(pairIndex, i), img)
+    
+    for i,label in enumerate(augument(label, rotationList)):
+        cv2.imwrite(outputLabelsDir+'/'+'label-%i-%i.jpeg'%(pairIndex, i), label)
+
+    #cv2.imwrite('testLabel.jpeg', label)
+    print('Augumentation in Progress: %i/%i\t\t%0.2f%%'%(
+        pairIndex+1,
+        len(imgNames),
+        100*(pairIndex+1)/len(imgNames)
+    ))
+    pairIndex += 1
