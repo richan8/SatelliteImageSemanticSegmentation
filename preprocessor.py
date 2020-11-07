@@ -1,5 +1,5 @@
 #### Imports
-import pyautogui
+#import pyautogui
 import numpy as np
 from PIL import Image
 from PIL import ImageFilter #PIL.Image.filter(ImageFilter.MinFilter(3))
@@ -14,10 +14,9 @@ inputLabelsDir = 'data/raw/labels'
 outputImgsDir = 'data/final/imgs'
 outputLabelsDir = 'data/final/labels'
 
-outputDir = 'data/final'
-
-imgNames = sorted(os.listdir(inputImgsDir))
-labelNames = sorted(os.listdir(inputLabelsDir))
+imgFormats = ['jpeg','png','jpeg']
+imgNames = [x for x in sorted(os.listdir(inputImgsDir)) if x.split('.')[-1] in imgFormats]
+labelNames = [x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in imgFormats]
 
 def processLabel(imgDir,labelDir):
     ## Images are in BGR
