@@ -87,7 +87,8 @@ def processLabel(imgDir,labelDir):
 
     # Largest Filter applied is size 11 which means we need a minimum 5 pixels of padding.
     # Therefore the label and image are cropped by 5 px
-    res = res[5:res.shape[0]-5,5:res.shape[1]-5]
+    # We add an additional crop of 1 pixel to make the size 464x464 (Divisible by 2^5 for our model)
+    res = res[5:res.shape[0]-6,5:res.shape[1]-6]
 
     return(res)
 
@@ -97,7 +98,8 @@ def processImg(imgDir):
 
     # Filter size 11 applied in label which means we need a 5 pixel padding.
     # Therefore the label and image are cropped by 5 px
-    im = im[5:im.shape[0]-5,5:im.shape[1]-5,:]
+    # We add an additional crop of 1 pixel to make the size 464x464 (Divisible by 2^5 for our model)
+    im = im[5:im.shape[0]-6,5:im.shape[1]-6,:]
     return(im)
 
 ### Augumentation 
