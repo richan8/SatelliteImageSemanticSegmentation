@@ -26,6 +26,10 @@ IMG_HEIGHT = None
 IMG_WIDTH = None
 smooth = 1.
 
+# TRUNCATING THE DATASET FOR TESTING
+imgNames = imgNames[:100]
+labelNames = labelNames[:100]
+
 # Calculate Dice coeff and loss to measure overlap between 2 samples
 def dice_coef(y_true, y_pred):
     y_true_f = K.flatten(y_true)
@@ -51,29 +55,29 @@ if __name__ == "__main__":
 
     ## ------------ tensorflow u-net image segmentation ------------------ ##
 
-    imgs = []
-    labels = []
+    sampleImg = cv2.imread(inputImgsDir+'/'+imgNames[0])
+    sh = sampleImg.shape
+    imgs = np.zeros((len(imgNames),sh[0],sh[1],sh[2]))
+    labels = np.zeros((len(imgNames),sh[0],sh[1]))
 
     # load the entire dataset
+    i = 0
     for imgName,labelName in zip(imgNames,labelNames):
         imgDir = inputImgsDir+'/'+imgName
         labelDir = inputLabelsDir+'/'+labelName
 
-        img = cv2.imread(imgDir)
-        label = cv2.imread(labelDir, cv2.IMREAD_GRAYSCALE)
+        imgs[i] = cv2.imread(imgDir)
+        labels[i] = cv2.imread(labelDir, cv2.IMREAD_GRAYSCALE)
+        
+        #cv2.imshow('img',imgs[0])
+        #cv2.waitKey(0)
+        #cv2.imshow('label',labels[0])
+        #cv2.waitKey(0)
+        
+        i += 1
 
-        '''
-        cv2.imshow('img',img)
-        cv2.waitKey(0)
-        cv2.imshow('label',label)
-        cv2.waitKey(0)
-        '''
-
-        imgs.append(img)
-        labels.append(label)
-
-    IMG_HEIGHT = imgs[0].shape[0]
-    IMG_WIDTH = imgs[0].shape[1]
+    IMG_HEIGHT = imgs.shape[1]
+    IMG_WIDTH = imgs.shape[2]
 
     # Random training on n samples
     N = 100
@@ -85,7 +89,7 @@ if __name__ == "__main__":
     inputs = Input((IMG_HEIGHT, IMG_WIDTH, 3))
 
     # Starting neurons
-    n = 32
+    n = 2
 
     # IMAGE SIZE 444 x 444
     conv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(inputs)
@@ -138,8 +142,13 @@ if __name__ == "__main__":
     outputLayer = Conv2D(1, (1, 1), padding='same', activation='sigmoid')(upConv1)
 
     model = Model(inputs=[inputs], outputs=[outputLayer])
-    #model.compile(optimizer=Adam(lr = 1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=Adam(lr = 1e-5), loss=dice_coef_loss, metrics=[dice_coef])
 
-    model.summary()
+    #model.summary()
 
-    #results = model.fit(im, gray_img, validation_split=0.1, batch_size=4, epochs=20)
+    results = model.fit(imgs,labels, validation_split=0.1, batch_size=4, epochs=1)
+
+    keras.models.save_model(
+        model=model,
+        filepath='models/m1',
+    )

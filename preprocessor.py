@@ -18,6 +18,8 @@ imgFormats = ['jpeg','png','jpeg']
 imgNames = [x for x in sorted(os.listdir(inputImgsDir)) if x.split('.')[-1] in imgFormats]
 labelNames = [x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in imgFormats]
 
+expectedDim = (464,464)
+
 def processLabel(imgDir,labelDir):
     ## Images are in BGR
     im = cv2.imread(labelDir)
@@ -133,9 +135,9 @@ def slices(img):
     n = int((img.shape[0])/2)
     return([
         img[0:n,0:n],
-        img[0:n,n:],
-        img[n:,0:n],
-        img[n:,n:]
+        img[0:n,n+1:],
+        img[n+1:,0:n],
+        img[n+1:,n+1:]
     ])
 
 # Applies all above augumentations to Image 
@@ -144,6 +146,16 @@ def augument(img, rotationList):
     res.extend(slices(img))
     res.extend(rotations(img, rotationList))
     res.extend(flips(res))
+    
+    # Ensuring the shape of Inputs and Outputs are as expected
+    # Global Var 'expectedDim' can be set to None to skip check
+    global expectedDim
+    if(expectedDim is not None):
+        unexpectedShapes = [x.shape for x in res if x.shape[0]!=464 or x.shape[1]!=464]
+        if(len(unexpectedShapes)>0):
+            print('Error - Unexpected Shapes Found: ',unexpectedShapes)
+            exit()
+    
     return(res)
 
 # Safety check before running the Augumentation
@@ -159,7 +171,7 @@ for imgName,labelName in zip(imgNames,labelNames):
     label = processLabel(imgDir, labelDir)
 
     # Generating random rotation list to augument labels and images.
-    numRotations = 32
+    numRotations = 8
     rotationList = [random.randint(0,360) for _ in range(numRotations)]
 
     for i,img in enumerate(augument(img, rotationList)):
@@ -168,8 +180,7 @@ for imgName,labelName in zip(imgNames,labelNames):
     for i,label in enumerate(augument(label, rotationList)):
         cv2.imwrite(outputLabelsDir+'/'+'label-%i-%i.jpeg'%(pairIndex, i), label)
 
-    #cv2.imwrite('testLabel.jpeg', label)
-    print('Augumentation in Progress: %i/%i\t\t%0.2f%%'%(
+    print('Augumentation in Progress: %i/%i\t%0.2f%%'%(
         pairIndex+1,
         len(imgNames),
         100*(pairIndex+1)/len(imgNames)
