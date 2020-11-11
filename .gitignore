@@ -6,3 +6,6 @@ final/
 
 # virtual envirnoment folders
 DLProject/
+
+# model folder
+models/
