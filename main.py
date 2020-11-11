@@ -68,12 +68,12 @@ if __name__ == "__main__":
 
         imgs[i] = cv2.imread(imgDir)
         labels[i] = cv2.imread(labelDir, cv2.IMREAD_GRAYSCALE)
-        
+
         #cv2.imshow('img',imgs[0])
         #cv2.waitKey(0)
         #cv2.imshow('label',labels[0])
         #cv2.waitKey(0)
-        
+
         i += 1
 
     IMG_HEIGHT = imgs.shape[1]
@@ -150,5 +150,5 @@ if __name__ == "__main__":
 
     keras.models.save_model(
         model=model,
-        filepath='models/m1',
+        filepath='models/m1.h5',
     )
