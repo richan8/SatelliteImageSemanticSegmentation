@@ -7,6 +7,7 @@ from PIL import ImageEnhance
 import os
 import cv2
 import random
+import dataHandler
 
 #### Global Vars
 inputImgsDir = 'data/raw/imgs'
@@ -80,12 +81,11 @@ def processLabel(imgDir,labelDir):
     # Creating the final mask
     vegetationMask = mask>0
 
-    ### Combining all masks into one image
-    res = np.zeros([im.shape[0],im.shape[1]],dtype=np.int16)
-    res.fill(0)
-    res[roadMask] = 84
-    res[buildingMask] = 255
-    res[vegetationMask] = 132
+    ### Combining all masks into the vectorized Image
+    res = np.zeros([im.shape[0],im.shape[1],3],dtype=np.uint8)
+    res[roadMask] = (1,0,0)
+    res[buildingMask] = (0,1,0)
+    res[vegetationMask] = (0,0,1)
 
     # Largest Filter applied is size 11 which means we need a minimum 5 pixels of padding.
     # Therefore the label and image are cropped by 5 px
@@ -171,14 +171,14 @@ for imgName,labelName in zip(imgNames,labelNames):
     label = processLabel(imgDir, labelDir)
 
     # Generating random rotation list to augument labels and images.
-    numRotations = 8
+    numRotations = 2
     rotationList = [random.randint(0,360) for _ in range(numRotations)]
 
     for i,img in enumerate(augument(img, rotationList)):
         cv2.imwrite(outputImgsDir+'/'+'img-%i-%i.jpeg'%(pairIndex, i), img)
     
     for i,label in enumerate(augument(label, rotationList)):
-        cv2.imwrite(outputLabelsDir+'/'+'label-%i-%i.jpeg'%(pairIndex, i), label)
+        dataHandler.saveNPArr(label, outputLabelsDir+'/'+'label-%i-%i.npy'%(pairIndex, i))
 
     print('Augumentation in Progress: %i/%i\t%0.2f%%'%(
         pairIndex+1,

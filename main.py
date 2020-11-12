@@ -14,21 +14,23 @@ from keras.layers.pooling import MaxPooling2D, MaxPooling3D
 from keras.layers.merge import concatenate
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+import dataHandler
 
 # Global Variables
 inputImgsDir = 'data/final/imgs'
 inputLabelsDir = 'data/final/labels'
 imgFormats = ['jpeg','png','jpeg']
+labelFormats = ['npy']
 imgNames = [x for x in sorted(os.listdir(inputImgsDir)) if x.split('.')[-1] in imgFormats]
-labelNames = [x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in imgFormats]
+labelNames = [x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in labelFormats]
 K.set_image_data_format('channels_last')
 IMG_HEIGHT = None
 IMG_WIDTH = None
 smooth = 1.
 
 # TRUNCATING THE DATASET FOR TESTING
-imgNames = imgNames[:100]
-labelNames = labelNames[:100]
+imgNames = imgNames[:300]
+labelNames = labelNames[:300]
 
 # Calculate Dice coeff and loss to measure overlap between 2 samples
 def dice_coef(y_true, y_pred):
@@ -39,57 +41,41 @@ def dice_coef(y_true, y_pred):
 
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
+    
+'''
+### Testing the label image to vector conversion
+label = cv2.imread('data/final/labels/label-0-0.jpeg', cv2.IMREAD_GRAYSCALE)
+labelVec = vectorizeLabelImg(label)
+regenLabel = labelVecToImg(labelVec)
+print(compareImgs(label,regenLabel))
+'''
 
 if __name__ == "__main__":
-
-    '''
-    # sample img
-    gray = []
-    im = np.random.randint(256, size=(5,256,256,3))
-    im_type = np.array(im, dtype=np.uint8)
-    for i in range(im.shape[0]):
-        gray.append(cv2.cvtColor(im_type[i], cv2.COLOR_RGB2GRAY))
-    gray_img = np.array(gray, dtype=np.float32)
-    #print(gray_img.shape)
-    '''
-
     ## ------------ tensorflow u-net image segmentation ------------------ ##
 
     sampleImg = cv2.imread(inputImgsDir+'/'+imgNames[0])
     sh = sampleImg.shape
     imgs = np.zeros((len(imgNames),sh[0],sh[1],sh[2]))
-    labels = np.zeros((len(imgNames),sh[0],sh[1]))
+    labels = np.zeros((len(labelNames),sh[0],sh[1],3))
 
     # load the entire dataset
     i = 0
+
     for imgName,labelName in zip(imgNames,labelNames):
-        imgDir = inputImgsDir+'/'+imgName
-        labelDir = inputLabelsDir+'/'+labelName
-
-        imgs[i] = cv2.imread(imgDir)
-        labels[i] = cv2.imread(labelDir, cv2.IMREAD_GRAYSCALE)
-
-        #cv2.imshow('img',imgs[0])
-        #cv2.waitKey(0)
-        #cv2.imshow('label',labels[0])
-        #cv2.waitKey(0)
-
+        imgs[i] = cv2.imread(inputImgsDir+'/'+imgName)
+        labels[i] = dataHandler.loadNPArr(inputLabelsDir+'/'+labelName)
         i += 1
+
+    print('Data Loaded')
 
     IMG_HEIGHT = imgs.shape[1]
     IMG_WIDTH = imgs.shape[2]
-
-    # Random training on n samples
-    N = 100
-    indexes = np.random.choice(range(len(imgs)), replace=False, size=N)
-    imgSamples = np.array(imgs)[indexes]
-    labelSamples = np.array(labels)[indexes]
 
     # Build the U-net model
     inputs = Input((IMG_HEIGHT, IMG_WIDTH, 3))
 
     # Starting neurons
-    n = 2
+    n = 3
 
     # IMAGE SIZE 444 x 444
     conv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(inputs)
@@ -139,14 +125,14 @@ if __name__ == "__main__":
     upConv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(upConv1)
     upConv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(upConv1)
 
-    outputLayer = Conv2D(1, (1, 1), padding='same', activation='sigmoid')(upConv1)
+    outputLayer = Conv2D(3, (1, 1), padding='same', activation='sigmoid')(upConv1)
 
     model = Model(inputs=[inputs], outputs=[outputLayer])
-    model.compile(optimizer=Adam(lr = 1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=Adam(lr = 1e-4), loss=dice_coef_loss, metrics=[dice_coef])
 
-    #model.summary()
+    model.summary()
 
-    results = model.fit(imgs,labels, validation_split=0.1, batch_size=4, epochs=1)
+    results = model.fit(imgs,labels, validation_split=0.1, batch_size=32, epochs=3)
 
     keras.models.save_model(
         model=model,

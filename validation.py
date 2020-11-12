@@ -1,46 +1,57 @@
 import numpy as np
-import pandas as pd
 import cv2
 import os
 import tensorflow as tf
 import keras
-import matplotlib.pyplot as plt
-from keras import backend as K
-from keras.models import Model, Input, load_model
-from keras.layers import Input
-from keras.layers.core import Dropout, Lambda
-from keras.layers.convolutional import Conv2D, Conv2DTranspose, Conv3D, Conv3DTranspose
-from keras.layers.pooling import MaxPooling2D, MaxPooling3D
-from keras.layers.merge import concatenate
-from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, ModelCheckpoint
 from main import dice_coef, dice_coef_loss
+import dataHandler
 
 # Global Variables
-inputImgsDir = 'data/final/imgs'
-inputLabelsDir = 'data/final/labels'
+ImgsDir = 'data/final/imgs'
+LabelsDir = 'data/final/labels'
 imgFormats = ['jpeg','png','jpeg']
-imgNames = [x for x in sorted(os.listdir(inputImgsDir)) if x.split('.')[-1] in imgFormats]
-labelNames = [x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in imgFormats]
+labelFormats = ['npy']
+imgNames = [x for x in sorted(os.listdir(ImgsDir)) if x.split('.')[-1] in imgFormats]
+labelNames = [x for x in sorted(os.listdir(LabelsDir)) if x.split('.')[-1] in labelFormats]
 
 # load model
 loadedModel = tf.keras.models.load_model('models/m1.h5', custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
 loadedModel.summary()
 
-# validation(just 2 images for now)
-imgTest = []
-labelTest = []
-imgDir = []
-labelDir = []
-for i in range(2):
-    imgDir.append(inputImgsDir+'/'+imgNames[i])
-    labelDir.append(inputLabelsDir+'/'+labelNames[i])
-for i in range(2):
-    imgTest.append(cv2.imread(imgDir[i]))
-    labelTest.append(cv2.imread(labelDir[i], cv2.IMREAD_GRAYSCALE))
+def validate(imgsDir,labelsDir,imgNames,labelNames,model, showImgs=False):
+    accuracies = []
+    i = 0
+    for imgName,labelName in zip(imgNames,labelNames):
+        imgPath = imgsDir+'/'+imgName
+        labelPath = labelsDir+'/'+labelName
 
-label_pred = loadedModel.predict(np.array(imgTest))
-for l in label_pred:
-    print("Label: ",label_pred[i])
-    cv2.imshow("label", label_pred[i])
-    cv2.waitKey(0)
+        img = np.array([cv2.imread(imgPath)])
+        labelVec = dataHandler.loadNPArr(labelPath)
+        label = dataHandler.labelVecToImg(labelVec)
+
+        predVec = dataHandler.tensorToPrediction(model.predict(img)[0])
+        predImg = dataHandler.labelVecToImg(predVec, 'RGB')
+
+        accuracies.append(dataHandler.compareImgs(labelVec,predVec))
+        if(showImgs):
+            cv2.imshow('Predicted: ',predImg)
+            cv2.waitKey(0)
+
+            cv2.imshow('Actual: ',label)
+            cv2.waitKey(0)
+        i += 1
+        print('Validation in Progress: %i/%i\t%0.2f%%'%(
+            i,
+            len(imgNames),
+            100*(i)/len(imgNames)
+        ))
+    return(sum(accuracies)/len(accuracies))
+
+if __name__ == "__main__":
+    samples = 10
+    sampleIndexes = np.random.randint(0,len(imgNames),size=(samples))
+    sampleImgNames = [imgNames[i] for i in sampleIndexes]
+    sampleLabelNames = [labelNames[i] for i in sampleIndexes]
+    
+    acc = validate(ImgsDir, LabelsDir, sampleImgNames, sampleLabelNames, loadedModel)
+    print('Model Accuracy: %0.3f'%(acc))
