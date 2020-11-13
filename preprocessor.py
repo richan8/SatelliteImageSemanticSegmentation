@@ -171,7 +171,7 @@ for imgName,labelName in zip(imgNames,labelNames):
     label = processLabel(imgDir, labelDir)
 
     # Generating random rotation list to augument labels and images.
-    numRotations = 2
+    numRotations = 8
     rotationList = [random.randint(0,360) for _ in range(numRotations)]
 
     for i,img in enumerate(augument(img, rotationList)):
