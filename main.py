@@ -15,6 +15,8 @@ from keras.layers.merge import concatenate
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 import dataHandler
+import dataLoader
+from dataLoader import DataLoader
 
 # Global Variables
 inputImgsDir = 'data/final/imgs'
@@ -41,7 +43,7 @@ def dice_coef(y_true, y_pred):
 
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
-    
+
 '''
 ### Testing the label image to vector conversion
 label = cv2.imread('data/final/labels/label-0-0.jpeg', cv2.IMREAD_GRAYSCALE)
@@ -59,17 +61,22 @@ if __name__ == "__main__":
     labels = np.zeros((len(labelNames),sh[0],sh[1],3))
 
     # load the entire dataset
+    '''
     i = 0
 
     for imgName,labelName in zip(imgNames,labelNames):
         imgs[i] = cv2.imread(inputImgsDir+'/'+imgName)
         labels[i] = dataHandler.loadNPArr(inputLabelsDir+'/'+labelName)
         i += 1
-
+    '''
+    training_generator = DataLoader(imgNames, labelNames, inputImgsDir, inputLabelsDir)
+    validation_generator = DataLoader(imgNames, labelNames, inputImgsDir, inputLabelsDir)
     print('Data Loaded')
 
-    IMG_HEIGHT = imgs.shape[1]
-    IMG_WIDTH = imgs.shape[2]
+    #IMG_HEIGHT = imgs.shape[1]
+    #IMG_WIDTH = imgs.shape[2]
+    IMG_HEIGHT = 464
+    IMG_WIDTH = 464
 
     # Build the U-net model
     inputs = Input((IMG_HEIGHT, IMG_WIDTH, 3))
@@ -132,9 +139,9 @@ if __name__ == "__main__":
 
     model.summary()
 
-    results = model.fit(imgs,labels, validation_split=0.1, batch_size=32, epochs=3)
-
+    #results = model.fit(imgs,labels, validation_split=0.1, batch_size=32, epochs=3)
+    results = model.fit(training_generator, validation_data=validation_generator)
     keras.models.save_model(
         model=model,
-        filepath='models/m1.h5',
+        filepath='models/m2.h5',
     )
