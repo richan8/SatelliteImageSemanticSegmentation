@@ -76,11 +76,11 @@ class DataLoader(Sequence):
         :return: batch of images
         """
         # Initialization
-        X = np.empty((self.batch_size, *self.dim))
+        X = np.empty((self.batch_size, *self.dim, self.n_channels))
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
-            X[i,] = self._load_grayscale_image(self.image_path + '/' + ID)
+            X[i,] = self._load_image(self.image_path + '/' + ID)
 
         return X
 
@@ -89,7 +89,7 @@ class DataLoader(Sequence):
         :param list_IDs_temp: list of label ids to load
         :return: batch if masks
         """
-        y = np.empty((self.batch_size, *self.dim, self.n_channels), dtype=int)
+        y = np.empty((self.batch_size, *self.dim, self.n_channels))
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
@@ -99,12 +99,10 @@ class DataLoader(Sequence):
 
         return y
 
-    def _load_grayscale_image(self, image_path):
+    def _load_image(self, image_path):
         """Load grayscale image
         :param image_path: path to image to load
         :return: loaded image
         """
         img = cv2.imread(image_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img = img / 255
         return img

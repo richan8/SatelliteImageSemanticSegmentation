@@ -17,6 +17,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 import dataHandler
 import dataLoader
 from dataLoader import DataLoader
+from sklearn.model_selection import train_test_split
 
 # Global Variables
 inputImgsDir = 'data/final/imgs'
@@ -29,10 +30,13 @@ K.set_image_data_format('channels_last')
 IMG_HEIGHT = None
 IMG_WIDTH = None
 smooth = 1.
+RANDOM_STATE = 42
 
+'''
 # TRUNCATING THE DATASET FOR TESTING
 imgNames = imgNames[:300]
 labelNames = labelNames[:300]
+'''
 
 # Calculate Dice coeff and loss to measure overlap between 2 samples
 def dice_coef(y_true, y_pred):
@@ -55,6 +59,7 @@ print(compareImgs(label,regenLabel))
 if __name__ == "__main__":
     ## ------------ tensorflow u-net image segmentation ------------------ ##
 
+    # for setting the image and label shape
     sampleImg = cv2.imread(inputImgsDir+'/'+imgNames[0])
     sh = sampleImg.shape
     imgs = np.zeros((len(imgNames),sh[0],sh[1],sh[2]))
@@ -69,14 +74,15 @@ if __name__ == "__main__":
         labels[i] = dataHandler.loadNPArr(inputLabelsDir+'/'+labelName)
         i += 1
     '''
-    training_generator = DataLoader(imgNames, labelNames, inputImgsDir, inputLabelsDir)
-    validation_generator = DataLoader(imgNames, labelNames, inputImgsDir, inputLabelsDir)
+
+    # Train-validation split
+    imgNamesTrain, imgNamesValidate, labelNamesTrain, labelNamesValidate = train_test_split(imgNames, labelNames, test_size=0.1, random_state=RANDOM_STATE)
+    training_generator = DataLoader(imgNamesTrain, labelNamesTrain, inputImgsDir, inputLabelsDir)
+    validation_generator = DataLoader(imgNamesValidate, labelNamesValidate, inputImgsDir, inputLabelsDir)
     print('Data Loaded')
 
-    #IMG_HEIGHT = imgs.shape[1]
-    #IMG_WIDTH = imgs.shape[2]
-    IMG_HEIGHT = 464
-    IMG_WIDTH = 464
+    IMG_HEIGHT = imgs.shape[1]
+    IMG_WIDTH = imgs.shape[2]
 
     # Build the U-net model
     inputs = Input((IMG_HEIGHT, IMG_WIDTH, 3))
@@ -141,6 +147,7 @@ if __name__ == "__main__":
 
     #results = model.fit(imgs,labels, validation_split=0.1, batch_size=32, epochs=3)
     results = model.fit(training_generator, validation_data=validation_generator)
+
     keras.models.save_model(
         model=model,
         filepath='models/m2.h5',

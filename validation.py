@@ -15,7 +15,7 @@ imgNames = [x for x in sorted(os.listdir(ImgsDir)) if x.split('.')[-1] in imgFor
 labelNames = [x for x in sorted(os.listdir(LabelsDir)) if x.split('.')[-1] in labelFormats]
 
 # load model
-loadedModel = tf.keras.models.load_model('models/m1.h5', custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
+loadedModel = tf.keras.models.load_model('models/m2.h5', custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
 loadedModel.summary()
 
 def validate(imgsDir,labelsDir,imgNames,labelNames,model, showImgs=False):
@@ -52,6 +52,6 @@ if __name__ == "__main__":
     sampleIndexes = np.random.randint(0,len(imgNames),size=(samples))
     sampleImgNames = [imgNames[i] for i in sampleIndexes]
     sampleLabelNames = [labelNames[i] for i in sampleIndexes]
-    
+
     acc = validate(ImgsDir, LabelsDir, sampleImgNames, sampleLabelNames, loadedModel)
     print('Model Accuracy: %0.3f'%(acc))
