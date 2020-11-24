@@ -15,7 +15,7 @@ imgNames = [x for x in sorted(os.listdir(ImgsDir)) if x.split('.')[-1] in imgFor
 labelNames = [x for x in sorted(os.listdir(LabelsDir)) if x.split('.')[-1] in labelFormats]
 
 # load model
-loadedModel = tf.keras.models.load_model('models/m2.h5', custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
+loadedModel = tf.keras.models.load_model('models/m8.h5', custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
 loadedModel.summary()
 
 def validate(imgsDir,labelsDir,imgNames,labelNames,model, showImgs=False):
@@ -29,16 +29,39 @@ def validate(imgsDir,labelsDir,imgNames,labelNames,model, showImgs=False):
         labelVec = dataHandler.loadNPArr(labelPath)
         label = dataHandler.labelVecToImg(labelVec)
 
-        predVec = dataHandler.tensorToPrediction(model.predict(img)[0])
-        predImg = dataHandler.labelVecToImg(predVec, 'RGB')
+        pred = model.predict(img)[0]
+        '''
+        b,g,r = cv2.split(pred)
 
-        accuracies.append(dataHandler.compareImgs(labelVec,predVec))
+        cv2.imshow('Img : ',img[0])
+        cv2.waitKey(0)
+
+        cv2.imshow('Prediction : ',pred)
+        cv2.waitKey(0)
+
+        cv2.imshow('b : ',b)
+        cv2.waitKey(0)
+
+        x = np.zeros((pred.shape[0],pred.shape[1]))
+        x[b>np.average(b)] = 1
+        cv2.imshow('b > avg : ',x)
+        cv2.waitKey(0)
+        '''
+        predVec = dataHandler.tensorToPrediction(pred)
+        acc = dataHandler.compareImgs(labelVec,predVec)
+        accuracies.append(acc)
+        print(acc)
+
         if(showImgs):
-            cv2.imshow('Predicted: ',predImg)
+            cv2.imshow('Prediction : ',pred)
             cv2.waitKey(0)
-
+            '''
+            predImg = dataHandler.labelVecToImg(predVec, 'RGB')
+            cv2.imshow('Predicted RGB: ',predImg)
+            cv2.waitKey(0)
             cv2.imshow('Actual: ',label)
             cv2.waitKey(0)
+            '''
         i += 1
         print('Validation in Progress: %i/%i\t%0.2f%%'%(
             i,
@@ -53,5 +76,5 @@ if __name__ == "__main__":
     sampleImgNames = [imgNames[i] for i in sampleIndexes]
     sampleLabelNames = [labelNames[i] for i in sampleIndexes]
 
-    acc = validate(ImgsDir, LabelsDir, sampleImgNames, sampleLabelNames, loadedModel)
+    acc = validate(ImgsDir, LabelsDir, sampleImgNames, sampleLabelNames, loadedModel, showImgs=True)
     print('Model Accuracy: %0.3f'%(acc))

@@ -13,7 +13,7 @@ from keras.layers.convolutional import Conv2D, Conv2DTranspose, Conv3D, Conv3DTr
 from keras.layers.pooling import MaxPooling2D, MaxPooling3D
 from keras.layers.merge import concatenate
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 import dataHandler
 import dataLoader
 from dataLoader import DataLoader
@@ -37,6 +37,8 @@ RANDOM_STATE = 42
 imgNames = imgNames[:300]
 labelNames = labelNames[:300]
 '''
+imgNames = imgNames
+labelNames = labelNames
 
 # Calculate Dice coeff and loss to measure overlap between 2 samples
 def dice_coef(y_true, y_pred):
@@ -69,9 +71,24 @@ if __name__ == "__main__":
     '''
     i = 0
 
+    imgNames = np.array(imgNames)
+    labelNames = np.array(labelNames)
+    shuffler = np.random.permutation(len(imgNames))
+    imgNames = imgNames[shuffler]
+    labelNames = labelNames[shuffler]
+
     for imgName,labelName in zip(imgNames,labelNames):
         imgs[i] = cv2.imread(inputImgsDir+'/'+imgName)
         labels[i] = dataHandler.loadNPArr(inputLabelsDir+'/'+labelName)
+
+        '''
+    cv2.imshow('Img',imgs[i]/255)
+    cv2.waitKey(0)
+
+    cv2.imshow('Label',dataHandler.labelVecToImg(labels[i]))
+    cv2.waitKey(0)
+    '''
+
         i += 1
     '''
 
@@ -88,67 +105,92 @@ if __name__ == "__main__":
     inputs = Input((IMG_HEIGHT, IMG_WIDTH, 3))
 
     # Starting neurons
-    n = 3
+    n = 8
 
     # IMAGE SIZE 444 x 444
     conv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(inputs)
     conv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
-    pool1 = Dropout(0.1)(pool1)
+    #pool1 = Dropout(0.1)(pool1)
 
     conv2 = Conv2D(n*2, (3, 3), activation='relu', padding='same')(pool1)
     conv2 = Conv2D(n*2, (3, 3), activation='relu', padding='same')(conv2)
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
-    pool2 = Dropout(0.1)(pool2)
+    #pool2 = Dropout(0.1)(pool2)
 
     conv3 = Conv2D(n*4, (3, 3), activation='relu', padding='same')(pool2)
     conv3 = Conv2D(n*4, (3, 3), activation='relu', padding='same')(conv3)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
-    pool3 = Dropout(0.2)(pool3)
+    #pool3 = Dropout(0.2)(pool3)
 
     conv4 = Conv2D(n*8, (3, 3), activation='relu', padding='same')(pool3)
     conv4 = Conv2D(n*8, (3, 3), activation='relu', padding='same')(conv4)
     pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
-    pool4 = Dropout(0.20)(pool4)
+    #pool4 = Dropout(0.20)(pool4)
 
     convMid = Conv2D(n*16, (3, 3), activation='relu', padding='same')(pool4)
     convMid = Conv2D(n*16, (3, 3), activation='relu', padding='same')(convMid)
 
     deConv4 = Conv2DTranspose(n*8, (3, 3), strides=(2, 2), padding='same')(convMid)
     upConv4 = concatenate([deConv4, conv4]) #, axis=3
-    upConv4 = Dropout(0.2)(upConv4)
+    #upConv4 = Dropout(0.2)(upConv4)
     upConv4 = Conv2D(n*8, (3, 3), activation='relu', padding='same')(upConv4)
     upConv4 = Conv2D(n*8, (3, 3), activation='relu', padding='same')(upConv4)
 
     deConv3 = Conv2DTranspose(n*4, (3, 3), strides=(2, 2), padding='same')(upConv4)
     upConv3 = concatenate([deConv3, conv3]) #, axis=3
-    upConv3 = Dropout(0.2)(upConv3)
+    #upConv3 = Dropout(0.2)(upConv3)
     upConv3 = Conv2D(n*4, (3, 3), activation='relu', padding='same')(upConv3)
     upConv3 = Conv2D(n*4, (3, 3), activation='relu', padding='same')(upConv3)
 
     deConv2 = Conv2DTranspose(n*2, (3, 3), strides=(2, 2), padding='same')(upConv3)
     upConv2 = concatenate([deConv2, conv2]) #, axis=3
-    upConv2 = Dropout(0.2)(upConv2)
+    #upConv2 = Dropout(0.2)(upConv2)
     upConv2 = Conv2D(n*2, (3, 3), activation='relu', padding='same')(upConv2)
     upConv2 = Conv2D(n*2, (3, 3), activation='relu', padding='same')(upConv2)
 
     deConv1 = Conv2DTranspose(n*1, (3, 3), strides=(2, 2), padding='same')(upConv2)
     upConv1 = concatenate([deConv1, conv1]) #, axis=3
-    upConv1 = Dropout(0.2)(upConv1)
+    #upConv1 = Dropout(0.2)(upConv1)
     upConv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(upConv1)
     upConv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(upConv1)
 
-    outputLayer = Conv2D(3, (1, 1), padding='same', activation='sigmoid')(upConv1)
+    outputLayer = Conv2D(3, (1), padding='same', activation='softmax')(upConv1)
 
     model = Model(inputs=[inputs], outputs=[outputLayer])
-    model.compile(optimizer=Adam(lr = 1e-4), loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=Adam(lr = 5*(1e-4)), loss='categorical_crossentropy',metrics=['accuracy'])
 
     model.summary()
 
-    #results = model.fit(imgs,labels, validation_split=0.1, batch_size=32, epochs=3)
+    callbacks = [
+        ModelCheckpoint("model.h5", verbose=1, save_best_model=True),
+        ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
+        EarlyStopping(monitor="val_loss", patience=10, verbose=1)
+    ]
+    '''
+    results = model.fit(
+        imgs,
+        labels,
+        validation_split=0.2,
+        batch_size=4,
+        epochs=1,
+        workers = 6,
+        callbacks=callbacks
+    )
+    '''
     results = model.fit(training_generator, validation_data=validation_generator)
-
     keras.models.save_model(
         model=model,
-        filepath='models/m2.h5',
+        filepath='models/m8.h5',
     )
+    print('ModelSaved')
+
+    '''
+    import validation
+    validation.validate(inputImgsDir, inputLabelsDir,imgNames,labelNames, model, showImgs=True)
+    '''
+
+    '''
+    Try:
+        Batch Normalization when building model
+    '''
