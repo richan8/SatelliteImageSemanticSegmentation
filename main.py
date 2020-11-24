@@ -68,9 +68,8 @@ if __name__ == "__main__":
     labels = np.zeros((len(labelNames),sh[0],sh[1],3))
 
     # load the entire dataset
-    '''
     i = 0
-
+    '''
     imgNames = np.array(imgNames)
     labelNames = np.array(labelNames)
     shuffler = np.random.permutation(len(imgNames))
@@ -178,7 +177,7 @@ if __name__ == "__main__":
         callbacks=callbacks
     )
     '''
-    results = model.fit(training_generator, validation_data=validation_generator)
+    results = model.fit(training_generator, validation_data=validation_generator, workers = 6, callbacks=callbacks)
     keras.models.save_model(
         model=model,
         filepath='models/m8.h5',
