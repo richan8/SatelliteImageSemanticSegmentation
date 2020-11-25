@@ -69,7 +69,6 @@ if __name__ == "__main__":
 
     # load the entire dataset
     i = 0
-    '''
     imgNames = np.array(imgNames)
     labelNames = np.array(labelNames)
     shuffler = np.random.permutation(len(imgNames))
@@ -95,6 +94,7 @@ if __name__ == "__main__":
     imgNamesTrain, imgNamesValidate, labelNamesTrain, labelNamesValidate = train_test_split(imgNames, labelNames, test_size=0.1, random_state=RANDOM_STATE)
     training_generator = DataLoader(imgNamesTrain, labelNamesTrain, inputImgsDir, inputLabelsDir)
     validation_generator = DataLoader(imgNamesValidate, labelNamesValidate, inputImgsDir, inputLabelsDir)
+    '''
     print('Data Loaded')
 
     IMG_HEIGHT = imgs.shape[1]
@@ -160,13 +160,18 @@ if __name__ == "__main__":
     model.compile(optimizer=Adam(lr = 5*(1e-4)), loss='categorical_crossentropy',metrics=['accuracy'])
 
     model.summary()
-
+    '''
+    callbacks = [
+        ModelCheckpoint("models/m9.h5", verbose=1, save_best_model=True),
+        ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
+        EarlyStopping(monitor="val_loss", patience=10, verbose=1)
+    ]
+    '''
     callbacks = [
         ModelCheckpoint("model.h5", verbose=1, save_best_model=True),
         ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
         EarlyStopping(monitor="val_loss", patience=10, verbose=1)
     ]
-    '''
     results = model.fit(
         imgs,
         labels,
@@ -178,10 +183,12 @@ if __name__ == "__main__":
     )
     '''
     results = model.fit(training_generator, validation_data=validation_generator, workers = 6, callbacks=callbacks)
+    '''
     keras.models.save_model(
         model=model,
-        filepath='models/m8.h5',
+        filepath='models/m9.h5',
     )
+
     print('ModelSaved')
 
     '''
