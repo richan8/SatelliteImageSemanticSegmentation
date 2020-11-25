@@ -89,9 +89,8 @@ We cannot risk altered pixel values while converting and saving labels. Due to t
 binary numpy files (.npy) which reliably store the encoded labels for each pixel. The image below shows one such pair of
 augmented jpeg image and corresponding .npy label which has been encoded as a greyscale image.
 
-```
-Figure 1. Augmented final image Figure 2. Augmented final label
-```
+![Augmented final image Figure](https://raw.githubusercontent.com/richan8/SatelliteImageSemanticSegmentation/main/Project%20Plan/pics/finalImg.jpeg)
+![Augmented final label](https://raw.githubusercontent.com/richan8/SatelliteImageSemanticSegmentation/main/Project%20Plan/pics/finalLabel.PNG)
 
 ## 4 MODEL AND TRAINING
 
@@ -133,9 +132,7 @@ training the model. Using callbacks like ModelCheckpoint, ReduceLROnPlateau, and
 better results and avoid both underfitting and overfitting of the input data. The diagram of the model architeture is below,
 the total number of trainable parameters are: 540,235.
 
-```
-Figure 3. Architecture of the model
-```
+![Architecture of the model](https://raw.githubusercontent.com/richan8/SatelliteImageSemanticSegmentation/main/Project%20Plan/pics/model.jpg)
 
 The first callback function, Early Stopping stops the training if the loss after every epoch does not decrease or in some
 cases, keeps on increasing. The second callback function, ReduceLROnPlateau is used to ensure that the learning rate
@@ -156,11 +153,11 @@ buildings. This is because the output of the model is a one-hot encoded vector o
 solution to this will be to have a 4th channel corresponding to a ’none of these’ class. We are also developing a custom data
 generator module and (time permitting) Amazon s3 integration to reduce the memory and storage footprint. This allows us
 to increase the number of neurons per layer. The final model would be trained for a much larger generated dataset, include
-the aforementioned 4thchannel, and have improved accuracy.
+the aforementioned 4th channel, and have improved accuracy.
 
-```
-Figure 4. Validation image Figure 5. Validation label
-```
+![Validation image](https://raw.githubusercontent.com/richan8/SatelliteImageSemanticSegmentation/main/Project%20Plan/pics/valImg.PNG)
+![Validation label Prediction](https://raw.githubusercontent.com/richan8/SatelliteImageSemanticSegmentation/main/Project%20Plan/pics/valOut.PNG)
+
 ## REFERENCES
 Ishii T., Simo-Serra E., I. S. M. Y. S. A. I. H. and R., N. (2016). Detection by classification of buildings in multispectral
 satellite imagery.23rd International Conference on Pattern Recognition (ICPR) Cancun Center ́ , (3344):3344–3349.
