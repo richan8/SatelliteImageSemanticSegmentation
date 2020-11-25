@@ -15,6 +15,9 @@ from keras.layers.merge import concatenate
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 import dataHandler
+import dataLoader
+from dataLoader import DataLoader
+from sklearn.model_selection import train_test_split
 
 # Global Variables
 inputImgsDir = 'data/final/imgs'
@@ -27,8 +30,13 @@ K.set_image_data_format('channels_last')
 IMG_HEIGHT = None
 IMG_WIDTH = None
 smooth = 1.
+RANDOM_STATE = 42
 
+'''
 # TRUNCATING THE DATASET FOR TESTING
+imgNames = imgNames[:300]
+labelNames = labelNames[:300]
+'''
 imgNames = imgNames
 labelNames = labelNames
 
@@ -41,7 +49,7 @@ def dice_coef(y_true, y_pred):
 
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
-    
+
 '''
 ### Testing the label image to vector conversion
 label = cv2.imread('data/final/labels/label-0-0.jpeg', cv2.IMREAD_GRAYSCALE)
@@ -53,6 +61,7 @@ print(compareImgs(label,regenLabel))
 if __name__ == "__main__":
     ## ------------ tensorflow u-net image segmentation ------------------ ##
 
+    # for setting the image and label shape
     sampleImg = cv2.imread(inputImgsDir+'/'+imgNames[0])
     sh = sampleImg.shape
     imgs = np.zeros((len(imgNames),sh[0],sh[1],sh[2]))
@@ -60,7 +69,6 @@ if __name__ == "__main__":
 
     # load the entire dataset
     i = 0
-
     imgNames = np.array(imgNames)
     labelNames = np.array(labelNames)
     shuffler = np.random.permutation(len(imgNames))
@@ -70,17 +78,23 @@ if __name__ == "__main__":
     for imgName,labelName in zip(imgNames,labelNames):
         imgs[i] = cv2.imread(inputImgsDir+'/'+imgName)
         labels[i] = dataHandler.loadNPArr(inputLabelsDir+'/'+labelName)
-        
-        '''
-        cv2.imshow('Img',imgs[i]/255)
-        cv2.waitKey(0)
 
-        cv2.imshow('Label',dataHandler.labelVecToImg(labels[i]))
-        cv2.waitKey(0)
         '''
+    cv2.imshow('Img',imgs[i]/255)
+    cv2.waitKey(0)
+
+    cv2.imshow('Label',dataHandler.labelVecToImg(labels[i]))
+    cv2.waitKey(0)
+    '''
 
         i += 1
+    '''
 
+    # Train-validation split
+    imgNamesTrain, imgNamesValidate, labelNamesTrain, labelNamesValidate = train_test_split(imgNames, labelNames, test_size=0.1, random_state=RANDOM_STATE)
+    training_generator = DataLoader(imgNamesTrain, labelNamesTrain, inputImgsDir, inputLabelsDir)
+    validation_generator = DataLoader(imgNamesValidate, labelNamesValidate, inputImgsDir, inputLabelsDir)
+    '''
     print('Data Loaded')
 
     IMG_HEIGHT = imgs.shape[1]
@@ -146,34 +160,42 @@ if __name__ == "__main__":
     model.compile(optimizer=Adam(lr = 5*(1e-4)), loss='categorical_crossentropy',metrics=['accuracy'])
 
     model.summary()
-
+    '''
+    callbacks = [
+        ModelCheckpoint("models/m9.h5", verbose=1, save_best_model=True),
+        ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
+        EarlyStopping(monitor="val_loss", patience=10, verbose=1)
+    ]
+    '''
     callbacks = [
         ModelCheckpoint("model.h5", verbose=1, save_best_model=True),
         ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
         EarlyStopping(monitor="val_loss", patience=10, verbose=1)
     ]
-
     results = model.fit(
         imgs,
         labels,
         validation_split=0.2,
         batch_size=4,
-        epochs=1, 
+        epochs=1,
         workers = 6,
         callbacks=callbacks
     )
-
+    '''
+    results = model.fit(training_generator, validation_data=validation_generator, workers = 6, callbacks=callbacks)
+    '''
     keras.models.save_model(
         model=model,
-        filepath='models/m8.h5',
+        filepath='models/m9.h5',
     )
+
     print('ModelSaved')
 
     '''
     import validation
     validation.validate(inputImgsDir, inputLabelsDir,imgNames,labelNames, model, showImgs=True)
     '''
-    
+
     '''
     Try:
         Batch Normalization when building model
