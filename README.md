@@ -1,9 +1,9 @@
 # Semantic Segmentation of Aerial Imagery
 
-## Nikita Jayakar^1 and Richanshu Jha^2
+## Nikita Jayakar<sup>1</sup> and Richanshu Jha<sup>2</sup>
 
-(^1) **nmj303@nyu.edu**
-(^2) **rj1469@nyu.edu**
+<sup>1</sup> **nmj303@nyu.edu**
+<sup>2</sup> **rj1469@nyu.edu**
 
 ## 1 PROBLEM STATEMENT
 
