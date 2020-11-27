@@ -160,12 +160,12 @@ the aforementioned 4th channel, and have improved accuracy.
 <p align="center">Fig: Validation Image and predicted labels</p>
 
 ## REFERENCES
-Ishii T., Simo-Serra E., I. S. M. Y. S. A. I. H. and R., N. (2016). Detection by classification of buildings in multispectral
-satellite imagery.23rd International Conference on Pattern Recognition (ICPR) Cancun Center ́ , (3344):3344–3349.
-Li, W., H.-C. F. J. Z. J. F. H. and Yu, L. (2019). Semantic segmentation-based building footprint extraction using very
-high-resolution satellite images and multi-source gis data.Remote Sensing, (403):1–19.
-Muruganandham S., R. M. (2016). Semantic segmentation of satellite images using deep learning.Faculty of Electrical
-Engineering, Department of Cybernetics, pages 51–62.
-Wurm, M., S. T. Z. X. W. M. and Taubenbock, H. (2019). Semantic segmentation of slums in satellite images using transfer ̈
-learning on fully convolutional neural networks.ISPRS Journal of Photogrammetry and Remote Sensing, (150):59–69.
+<p>Ishii T., Simo-Serra E., I. S. M. Y. S. A. I. H. and R., N. (2016). Detection by classification of buildings in multispectral
+satellite imagery.23rd International Conference on Pattern Recognition (ICPR) Cancun Center ́ , (3344):3344–3349.</p>
+<p>Li, W., H.-C. F. J. Z. J. F. H. and Yu, L. (2019). Semantic segmentation-based building footprint extraction using very
+high-resolution satellite images and multi-source gis data.Remote Sensing, (403):1–19.</p>
+<p>Muruganandham S., R. M. (2016). Semantic segmentation of satellite images using deep learning.Faculty of Electrical
+Engineering, Department of Cybernetics, pages 51–62.</P>
+<p>Wurm, M., S. T. Z. X. W. M. and Taubenbock, H. (2019). Semantic segmentation of slums in satellite images using transfer ̈
+learning on fully convolutional neural networks.ISPRS Journal of Photogrammetry and Remote Sensing, (150):59–69.</p>
 

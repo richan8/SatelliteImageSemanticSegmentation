@@ -74,18 +74,17 @@ if __name__ == "__main__":
     shuffler = np.random.permutation(len(imgNames))
     imgNames = imgNames[shuffler]
     labelNames = labelNames[shuffler]
-
+    '''
     for imgName,labelName in zip(imgNames,labelNames):
         imgs[i] = cv2.imread(inputImgsDir+'/'+imgName)
         labels[i] = dataHandler.loadNPArr(inputLabelsDir+'/'+labelName)
 
-        '''
     cv2.imshow('Img',imgs[i]/255)
     cv2.waitKey(0)
 
     cv2.imshow('Label',dataHandler.labelVecToImg(labels[i]))
     cv2.waitKey(0)
-    '''
+
 
         i += 1
     '''
@@ -94,7 +93,7 @@ if __name__ == "__main__":
     imgNamesTrain, imgNamesValidate, labelNamesTrain, labelNamesValidate = train_test_split(imgNames, labelNames, test_size=0.1, random_state=RANDOM_STATE)
     training_generator = DataLoader(imgNamesTrain, labelNamesTrain, inputImgsDir, inputLabelsDir)
     validation_generator = DataLoader(imgNamesValidate, labelNamesValidate, inputImgsDir, inputLabelsDir)
-    '''
+
     print('Data Loaded')
 
     IMG_HEIGHT = imgs.shape[1]
@@ -172,6 +171,7 @@ if __name__ == "__main__":
         ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
         EarlyStopping(monitor="val_loss", patience=10, verbose=1)
     ]
+    '''
     results = model.fit(
         imgs,
         labels,
@@ -183,7 +183,6 @@ if __name__ == "__main__":
     )
     '''
     results = model.fit(training_generator, validation_data=validation_generator, workers = 6, callbacks=callbacks)
-    '''
     keras.models.save_model(
         model=model,
         filepath='models/m9.h5',
