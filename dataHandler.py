@@ -1,4 +1,6 @@
 import numpy as np
+import cv2
+import os
 
 def labelVecToImg(labelVec, mode = 'G'):
     '''
@@ -42,7 +44,7 @@ def compareImgs(img1,img2,threshold = 0):
     '''
     Compares 2 images considering the minor errors in intensities in image compression.
     Returns the fraction of pixels that match given the threshold of error.
-    Given that we have switched to uncompressed labels, threshold for label comparision is set to 0.
+    Given that we have switched to uncompressed labels, threshold for label comparision is set to 0 so we check exact match.
     '''
     if(img1.shape != img2.shape):
         print('Incompatible image shapes during image comparision: ',img1.shape,img2.shape)
@@ -64,14 +66,29 @@ def compareImgs(img1,img2,threshold = 0):
                 c += 1
     return(c/n)
 
-def saveNPArr(img, imgDir):
-    with open(imgDir, 'wb') as f:
-        np.save(f, np.array(img), allow_pickle=True)
+# load the image fileNames for the entire dataset.
+def getImgNames(inputImgsDir, imgFormats):
+    return(np.array([x for x in sorted(os.listdir(inputImgsDir)) if x.split('.')[-1] in imgFormats]))
 
-def loadNPArr(imgDir):
-    with open(imgDir, 'rb') as f:
+# load the label fileNames for the entire dataset.
+def getLabelNames(inputLabelsDir, labelFormats):
+    return(np.array([x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in labelFormats]))
+
+def saveImg(img, imgPath):
+    cv2.imwrite(imgPath, img)
+
+def loadImg(imgPath):
+    return(cv2.imread(imgPath))
+
+def saveNPArr(npArr, npArrPath):
+    with open(npArrPath, 'wb') as f:
+        np.save(f, np.array(npArr), allow_pickle=True)
+
+def loadNPArr(imgPath):
+    with open(imgPath, 'rb') as f:
         return(np.load(f, allow_pickle=True))
 
+# Convert one hot encoded output to predicion vector
 def tensorToPrediction(labelPred, thresold = 0.4):
     for i,row in enumerate(labelPred):
         for j,x in enumerate(row):
