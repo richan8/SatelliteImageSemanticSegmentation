@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 from PIL import ImageFilter #PIL.Image.filter(ImageFilter.MinFilter(3))
 from PIL import ImageEnhance
-import os
 import cv2
 import random
 import dataHandler
@@ -14,16 +13,17 @@ inputImgsDir = 'data/raw/imgs'
 inputLabelsDir = 'data/raw/labels'
 outputImgsDir = 'data/final/imgs'
 outputLabelsDir = 'data/final/labels'
+imgFormats = ['jpeg','png','jpg']
+rawLabelFormats = ['jpeg','png','jpg']
 
-imgFormats = ['jpeg','png','jpeg']
-imgNames = [x for x in sorted(os.listdir(inputImgsDir)) if x.split('.')[-1] in imgFormats]
-labelNames = [x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in imgFormats]
+imgNames = dataHandler.getImgNames(inputImgsDir, imgFormats)
+labelNames = dataHandler.getLabelNames(inputLabelsDir, rawLabelFormats)
 
 expectedDim = (464,464)
 
 def processLabel(imgDir,labelDir):
     ## Images are in BGR
-    im = cv2.imread(labelDir)
+    im = dataHandler.loadImg(labelDir)
     im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
 
     ### Buildings
@@ -59,7 +59,7 @@ def processLabel(imgDir,labelDir):
     roadMask = roads>0
 
     ### VEGETATION
-    img = cv2.imread(imgDir)
+    img = dataHandler.loadImg(imgDir)
     PILImg = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     img = np.array(ImageEnhance.Color(PILImg).enhance(2))
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
@@ -96,7 +96,7 @@ def processLabel(imgDir,labelDir):
 
 def processImg(imgDir):
     ## IMAGES ARE READ IN BGR
-    im = cv2.imread(imgDir)
+    im = dataHandler.loadImg(imgDir)
 
     # Filter size 11 applied in label which means we need a 5 pixel padding.
     # Therefore the label and image are cropped by 5 px
@@ -151,9 +151,9 @@ def augument(img, rotationList):
     # Global Var 'expectedDim' can be set to None to skip check
     global expectedDim
     if(expectedDim is not None):
-        unexpectedShapes = [x.shape for x in res if x.shape[0]!=464 or x.shape[1]!=464]
+        unexpectedShapes = [x.shape for x in res if x.shape[0]!=expectedDim[0] or x.shape[1]!=expectedDim[1]]
         if(len(unexpectedShapes)>0):
-            print('Error - Unexpected Shapes Found: ',unexpectedShapes)
+            print('Error: Unexpected Dimensions Found - ',unexpectedShapes)
             exit()
     
     return(res)
@@ -175,14 +175,10 @@ for imgName,labelName in zip(imgNames,labelNames):
     rotationList = [random.randint(0,360) for _ in range(numRotations)]
 
     for i,img in enumerate(augument(img, rotationList)):
-        cv2.imwrite(outputImgsDir+'/'+'img-%i-%i.jpeg'%(pairIndex, i), img)
+        dataHandler.saveImg(img, outputImgsDir+'/'+'img-%i-%i.jpeg'%(pairIndex, i))
     
     for i,label in enumerate(augument(label, rotationList)):
         dataHandler.saveNPArr(label, outputLabelsDir+'/'+'label-%i-%i.npy'%(pairIndex, i))
 
-    print('Augumentation in Progress: %i/%i\t%0.2f%%'%(
-        pairIndex+1,
-        len(imgNames),
-        100*(pairIndex+1)/len(imgNames)
-    ))
+    print('Augumentation in Progress: %0.2f%%'%(100*(pairIndex+1)/len(imgNames)))
     pairIndex += 1

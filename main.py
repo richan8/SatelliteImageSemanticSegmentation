@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-import cv2
-import os
 import tensorflow as tf
 import keras
 import matplotlib.pyplot as plt
@@ -20,27 +18,54 @@ from dataLoader import DataLoader
 from sklearn.model_selection import train_test_split
 
 # Global Variables
+modelsDir = 'models'
+modelFormats = ['h5']
 inputImgsDir = 'data/final/imgs'
 inputLabelsDir = 'data/final/labels'
-imgFormats = ['jpeg','png','jpeg']
+imgFormats = ['jpeg','png','jpg']
 labelFormats = ['npy']
-imgNames = [x for x in sorted(os.listdir(inputImgsDir)) if x.split('.')[-1] in imgFormats]
-labelNames = [x for x in sorted(os.listdir(inputLabelsDir)) if x.split('.')[-1] in labelFormats]
+
 K.set_image_data_format('channels_last')
-IMG_HEIGHT = None
-IMG_WIDTH = None
 smooth = 1.
 RANDOM_STATE = 42
 
-'''
-# TRUNCATING THE DATASET FOR TESTING
-imgNames = imgNames[:300]
-labelNames = labelNames[:300]
-'''
-imgNames = imgNames
-labelNames = labelNames
+trainConfig = {
+    'epochs' : 10,
+    'batchSize' : 32,
+    'modelStartNeurons' : 8,
+    'dataLen': None, # Set during runtime
+}
+
+def genModelName(config):
+    return('m%s-%s-%s-%s.h5'%(
+        trainConfig['dataLen'],
+        trainConfig['modelStartNeurons'],
+        trainConfig['epochs'],
+        trainConfig['batchSize']
+    ))
+
+def genModelConfig(modelName, verbose=True):
+    x = [int(x) for x in modelName[1:-3].split('-')]
+    if(len(x) != 4):
+        print('Error: Incorrect model configuration format')
+        exit()
+    if(verbose):
+        print('---------------------------------')
+        print('Model Configuration: ')
+        print('Length of dataset :  ',x[0])
+        print('Starting neurons :   ',x[1])
+        print('Total epochs:        ',x[2])
+        print('Batch size:          ',x[3])
+        print('---------------------------------')
+    return({
+        'dataLen': x[0],
+        'modelStartNeurons': x[1],
+        'epochs': x[2],
+        'batchSize': x[3]
+    })
 
 # Calculate Dice coeff and loss to measure overlap between 2 samples
+# Experimental
 def dice_coef(y_true, y_pred):
     y_true_f = K.flatten(y_true)
     y_pred_f = K.flatten(y_pred)
@@ -50,60 +75,59 @@ def dice_coef(y_true, y_pred):
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
 
-'''
-### Testing the label image to vector conversion
-label = cv2.imread('data/final/labels/label-0-0.jpeg', cv2.IMREAD_GRAYSCALE)
-labelVec = vectorizeLabelImg(label)
-regenLabel = labelVecToImg(labelVec)
-print(compareImgs(label,regenLabel))
-'''
-
 if __name__ == "__main__":
-    ## ------------ tensorflow u-net image segmentation ------------------ ##
-
-    # for setting the image and label shape
-    sampleImg = cv2.imread(inputImgsDir+'/'+imgNames[0])
-    sh = sampleImg.shape
-    imgs = np.zeros((len(imgNames),sh[0],sh[1],sh[2]))
-    labels = np.zeros((len(labelNames),sh[0],sh[1],3))
-
-    # load the entire dataset
-    i = 0
-    imgNames = np.array(imgNames)
-    labelNames = np.array(labelNames)
-    shuffler = np.random.permutation(len(imgNames))
-    imgNames = imgNames[shuffler]
-    labelNames = labelNames[shuffler]
-    '''
-    for imgName,labelName in zip(imgNames,labelNames):
-        imgs[i] = cv2.imread(inputImgsDir+'/'+imgName)
-        labels[i] = dataHandler.loadNPArr(inputLabelsDir+'/'+labelName)
-
-    cv2.imshow('Img',imgs[i]/255)
-    cv2.waitKey(0)
-
-    cv2.imshow('Label',dataHandler.labelVecToImg(labels[i]))
-    cv2.waitKey(0)
-
-
-        i += 1
-    '''
+    imgNames = dataHandler.getImgNames(inputImgsDir, imgFormats)
+    labelNames = dataHandler.getLabelNames(inputLabelsDir, labelFormats)
+    
+    if(len(imgNames) != len(labelNames)):
+        print('Error: Image and Label lengths do not match')
+        exit()
+    
+    trainConfig['dataLen'] = len(imgNames)
+    print('Total dataset size:', trainConfig['dataLen'])
 
     # Train-validation split
     imgNamesTrain, imgNamesValidate, labelNamesTrain, labelNamesValidate = train_test_split(imgNames, labelNames, test_size=0.1, random_state=RANDOM_STATE)
-    training_generator = DataLoader(imgNamesTrain, labelNamesTrain, inputImgsDir, inputLabelsDir)
-    validation_generator = DataLoader(imgNamesValidate, labelNamesValidate, inputImgsDir, inputLabelsDir)
 
-    print('Data Loaded')
+    print('Train data size:   ',len(imgNamesTrain))
+    print('Train label size:  ',len(labelNamesTrain))
+    print('Test data size:    ',len(imgNamesValidate))
+    print('Test label size:   ',len(labelNamesValidate))
 
-    IMG_HEIGHT = imgs.shape[1]
-    IMG_WIDTH = imgs.shape[2]
+    sampleImg = dataHandler.loadImg(inputImgsDir+'/'+imgNamesTrain[0])
+    sampleLabel = dataHandler.loadNPArr(inputLabelsDir+'/'+labelNamesTrain[0])
+    
+    shImg = sampleImg.shape
+    shLabel = sampleLabel.shape
+
+    print('Image Dimensions:  ',shImg)
+    print('Label Dimensions:  ',shLabel)
+
+    # Initializing the data generators
+    training_generator = DataLoader(
+        imgNamesTrain, 
+        labelNamesTrain, 
+        inputImgsDir, 
+        inputLabelsDir,
+        trainConfig['batchSize'],
+        shLabel[-1],
+        (shImg[0], shImg[1])
+    )
+    validation_generator = DataLoader(
+        imgNamesValidate, 
+        labelNamesValidate, 
+        inputImgsDir,
+        inputLabelsDir,
+        trainConfig['batchSize'],
+        shLabel[-1],
+        (shImg[0], shImg[1])
+    )
 
     # Build the U-net model
-    inputs = Input((IMG_HEIGHT, IMG_WIDTH, 3))
+    inputs = Input(shImg)
 
     # Starting neurons
-    n = 8
+    n = trainConfig['modelStartNeurons']
 
     # IMAGE SIZE 444 x 444
     conv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(inputs)
@@ -153,47 +177,37 @@ if __name__ == "__main__":
     upConv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(upConv1)
     upConv1 = Conv2D(n*1, (3, 3), activation='relu', padding='same')(upConv1)
 
-    outputLayer = Conv2D(3, (1), padding='same', activation='softmax')(upConv1)
+    outputLayer = Conv2D(shLabel[-1], (1), padding='same', activation='softmax')(upConv1)
 
     model = Model(inputs=[inputs], outputs=[outputLayer])
     model.compile(optimizer=Adam(lr = 5*(1e-4)), loss='categorical_crossentropy',metrics=['accuracy'])
 
     model.summary()
-    '''
-    callbacks = [
-        ModelCheckpoint("models/m9.h5", verbose=1, save_best_model=True),
-        ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
-        EarlyStopping(monitor="val_loss", patience=10, verbose=1)
-    ]
-    '''
+
     callbacks = [
         ModelCheckpoint("model.h5", verbose=1, save_best_model=True),
         ReduceLROnPlateau(monitor="val_loss", patience=3, factor=0.1, verbose=1, min_lr=1e-6),
         EarlyStopping(monitor="val_loss", patience=10, verbose=1)
     ]
-    '''
+    
+    modelName = genModelName(trainConfig)
+    print('Training model',modelName)
+    genModelConfig(modelName, verbose=True)
+
     results = model.fit(
-        imgs,
-        labels,
-        validation_split=0.2,
-        batch_size=4,
-        epochs=1,
+        training_generator, 
+        validation_data=validation_generator,
         workers = 6,
-        callbacks=callbacks
+        callbacks=callbacks,
+        epochs=trainConfig['epochs']
     )
-    '''
-    results = model.fit(training_generator, validation_data=validation_generator, workers = 6, callbacks=callbacks)
+    
     keras.models.save_model(
         model=model,
-        filepath='models/m9.h5',
+        filepath= modelsDir+'/'+modelName,
     )
 
-    print('ModelSaved')
-
-    '''
-    import validation
-    validation.validate(inputImgsDir, inputLabelsDir,imgNames,labelNames, model, showImgs=True)
-    '''
+    print('Model',modelName,'saved to disk')
 
     '''
     Try:
