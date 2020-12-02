@@ -8,7 +8,7 @@ import dataHandler
 from main import genModelConfig
 
 # Global Variables
-modelName = 'm1680-8-20-6.h5' # Edit this to select model
+modelName = 'm1260-8-11-32.h5' # Edit this to select model
 modelsDir = 'models'
 ImgsDir = 'data/final/imgs'
 LabelsDir = 'data/final/labels'
@@ -33,6 +33,7 @@ def validate(imgsDir,labelsDir,imgNames,labelNames,modelName,showImgs=False, sho
         img = np.array([dataHandler.loadImg(imgPath)])
         labelVec = dataHandler.loadNPArr(labelPath)
         label = dataHandler.labelVecToImg(labelVec)
+
         pred = model.predict(img)[0]
         predVec = dataHandler.tensorToPrediction(pred,thresold=0.4)
         acc = dataHandler.compareImgs(labelVec,predVec)

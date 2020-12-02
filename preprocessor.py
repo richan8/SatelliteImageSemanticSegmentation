@@ -35,7 +35,7 @@ def processLabel(imgDir,labelDir):
     buildings = Image.fromarray(buildings)
     # Removes Noise
     buildings = buildings.filter(ImageFilter.MinFilter(3))
-    buildings = buildings.filter(ImageFilter.MaxFilter(5))
+    buildings = buildings.filter(ImageFilter.MaxFilter(3))
     buildings = np.array(buildings)
 
     # Creating the final mask
@@ -82,12 +82,10 @@ def processLabel(imgDir,labelDir):
     vegetationMask = mask>0
 
     ### Combining all masks into the vectorized Image
-    res = np.zeros([im.shape[0],im.shape[1],4],dtype=np.uint8)
-    res[:,:,3] = 1 # Initializing all pixels as background (0,0,0,1)
-
-    res[roadMask] = (1,0,0,0)
-    res[buildingMask] = (0,1,0,0)
-    res[vegetationMask] = (0,0,1,0)
+    res = np.zeros([im.shape[0],im.shape[1],3],dtype=np.uint8)
+    res[roadMask] = (1,0,0)
+    res[buildingMask] = (0,1,0)
+    res[vegetationMask] = (0,0,1)
 
     # Largest Filter applied is size 11 which means we need a minimum 5 pixels of padding.
     # Therefore the label and image are cropped by 5 px
@@ -172,15 +170,23 @@ for imgName,labelName in zip(imgNames,labelNames):
     img = processImg(imgDir)
     label = processLabel(imgDir, labelDir)
 
-    # Generating random rotation list to augument labels and images.
-    numRotations = 8
-    rotationList = [random.randint(0,360) for _ in range(numRotations)]
+    # Generating rotation list to augument labels and images.
+    numRotations = 12
+    rotationList = [int((i/numRotations)*360) for i in range(numRotations)]
 
     for i,img in enumerate(augument(img, rotationList)):
         dataHandler.saveImg(img, outputImgsDir+'/'+'img-%i-%i.jpeg'%(pairIndex, i))
     
     for i,label in enumerate(augument(label, rotationList)):
-        dataHandler.saveNPArr(label, outputLabelsDir+'/'+'label-%i-%i.npy'%(pairIndex, i))
+        ## Converting 3Dim label to 4Dim 1 hot vector by converting (0,0,0) to a new channel.
+        labelVec = np.zeros((label.shape[0], label.shape[1],  4), dtype=np.uint8)
+        labelVec[:,:,3] = 1
+        labelVec[label[:,:,0]==1] = (1,0,0,0)
+        labelVec[label[:,:,1]==1] = (0,1,0,0)
+        labelVec[label[:,:,2]==1] = (0,0,1,0)
+        #cv2.imshow('Image: ', dataHandler.labelVecToImg(labelVec))
+        #cv2.waitKey(0)
+        dataHandler.saveNPArr(labelVec, outputLabelsDir+'/'+'label-%i-%i.npy'%(pairIndex, i))
 
     print('Augumentation in Progress: %0.2f%%'%(100*(pairIndex+1)/len(imgNames)))
     pairIndex += 1
