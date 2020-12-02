@@ -12,17 +12,17 @@ def labelVecToImg(labelVec, mode = 'G'):
     dMap = {
         'G':{
             'dim'   : 1,
-            (0,0,0) : 0,
-            (1,0,0) : 84,
-            (0,1,0) : 255,
-            (0,0,1) : 132,
+            (0,0,0,1) : 0,
+            (1,0,0,0) : 84,
+            (0,1,0,0) : 255,
+            (0,0,1,0) : 132,
         },
         'RGB':{
             'dim'   : 3,
-            (0,0,0) : [255,255,255],
-            (1,0,0) : [100, 120, 180],
-            (0,1,0) : [220, 100, 140],
-            (0,0,1) : [100, 180, 120],
+            (0,0,0,1) : [0,0,0],
+            (1,0,0,0) : [100, 120, 180],
+            (0,1,0,0) : [220, 100, 140],
+            (0,0,1,0) : [100, 180, 120],
         }
     }
 
@@ -92,8 +92,7 @@ def loadNPArr(imgPath):
 def tensorToPrediction(labelPred, thresold = 0.4):
     for i,row in enumerate(labelPred):
         for j,x in enumerate(row):
-            temp = np.zeros((3),dtype=np.uint8)
-            if(np.max(x)>thresold):
-                temp[np.argmax(x)] = 1
+            temp = np.zeros((4),dtype=np.uint8)
+            temp[np.argmax(x)] = 1
             labelPred[i,j]=temp
     return(labelPred)

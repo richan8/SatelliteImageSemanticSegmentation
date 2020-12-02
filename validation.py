@@ -8,7 +8,7 @@ import dataHandler
 from main import genModelConfig
 
 # Global Variables
-modelName = 'm1260-8-3-32.h5' # Edit this to select model
+modelName = 'm1680-8-20-6.h5' # Edit this to select model
 modelsDir = 'models'
 ImgsDir = 'data/final/imgs'
 LabelsDir = 'data/final/labels'
@@ -57,5 +57,5 @@ if __name__ == "__main__":
     sampleImgNames = [imgNames[i] for i in sampleIndexes]
     sampleLabelNames = [labelNames[i] for i in sampleIndexes]
 
-    acc = validate(ImgsDir, LabelsDir, sampleImgNames, sampleLabelNames, modelName, showImgs=True)
+    acc = validate(ImgsDir, LabelsDir, sampleImgNames, sampleLabelNames, modelName, showImgs=False)
     print('Model Accuracy: %0.3f'%(acc))

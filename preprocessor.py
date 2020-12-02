@@ -82,10 +82,12 @@ def processLabel(imgDir,labelDir):
     vegetationMask = mask>0
 
     ### Combining all masks into the vectorized Image
-    res = np.zeros([im.shape[0],im.shape[1],3],dtype=np.uint8)
-    res[roadMask] = (1,0,0)
-    res[buildingMask] = (0,1,0)
-    res[vegetationMask] = (0,0,1)
+    res = np.zeros([im.shape[0],im.shape[1],4],dtype=np.uint8)
+    res[:,:,3] = 1 # Initializing all pixels as background (0,0,0,1)
+
+    res[roadMask] = (1,0,0,0)
+    res[buildingMask] = (0,1,0,0)
+    res[vegetationMask] = (0,0,1,0)
 
     # Largest Filter applied is size 11 which means we need a minimum 5 pixels of padding.
     # Therefore the label and image are cropped by 5 px
