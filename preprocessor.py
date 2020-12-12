@@ -66,7 +66,7 @@ def processLabel(imgDir,labelDir):
 
     # Thresholding HSV values to get pixels with vegetation
     # Took alot of time to perfect but finally it works great
-    sensitivity = 30
+    sensitivity = 35
     midH = 50
     startS = 50
     endS = 255
@@ -171,7 +171,7 @@ for imgName,labelName in zip(imgNames,labelNames):
     label = processLabel(imgDir, labelDir)
 
     # Generating rotation list to augument labels and images.
-    numRotations = 12
+    numRotations = 1
     rotationList = [int((i/numRotations)*360) for i in range(numRotations)]
 
     for i,img in enumerate(augument(img, rotationList)):

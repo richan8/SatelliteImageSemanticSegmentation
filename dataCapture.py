@@ -7,7 +7,7 @@ from PIL import Image
 #### Global Vars
 outputDir = 'data/raw'
 
-count = 0
+count = 10 # Edit this to change name of first image (to append data)
 def capture():
   global count
   raw = np.asarray(pyautogui.screenshot())

@@ -1,4 +1,7 @@
 import numpy as np
+from PIL import Image
+from PIL import ImageFilter
+from PIL import ImageEnhance
 import cv2
 import os
 
@@ -89,10 +92,25 @@ def loadNPArr(imgPath):
         return(np.load(f, allow_pickle=True))
 
 # Convert one hot encoded output to predicion vector
-def tensorToPrediction(labelPred, thresold = 0.4):
+def tensorToPrediction(labelPred, img, thresold = 0.4):
+    # Getting Vegetation mask from the image
+    PILImg = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    img = np.array(ImageEnhance.Color(PILImg).enhance(2))
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    sensitivity = 35
+    midH = 50
+    startS = 50
+    endS = 255
+    startV = 0
+    endV = 255
+    mask = cv2.inRange(hsv, (midH-sensitivity, startS, startV), (midH+sensitivity, endS, endV))
+    mask = np.array(Image.fromarray(mask).filter(ImageFilter.MinFilter(5)))
+    mask = np.array(Image.fromarray(mask).filter(ImageFilter.MaxFilter(7)))
+    vegetationMask = mask>0
     for i,row in enumerate(labelPred):
         for j,x in enumerate(row):
             temp = np.zeros((4),dtype=np.uint8)
             temp[np.argmax(x)] = 1
-            labelPred[i,j]=temp
+            labelPred[i,j] = temp
+    labelPred[vegetationMask] = (0,0,1,0)
     return(labelPred)
