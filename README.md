@@ -4,7 +4,8 @@
 
 <sup>1</sup> **nmj303@nyu.edu**
 <sup>2</sup> **rj1469@nyu.edu**
-
+%%%
+<!--
 ## 1 PROBLEM STATEMENT
 
 These days, there are many applications which require the involvement of creation of geospatial representation of cities.
@@ -168,4 +169,4 @@ high-resolution satellite images and multi-source gis data.Remote Sensing, (403)
 Engineering, Department of Cybernetics, pages 51–62.</P>
 <p>Wurm, M., S. T. Z. X. W. M. and Taubenbock, H. (2019). Semantic segmentation of slums in satellite images using transfer ̈
 learning on fully convolutional neural networks.ISPRS Journal of Photogrammetry and Remote Sensing, (150):59–69.</p>
-
+-->
