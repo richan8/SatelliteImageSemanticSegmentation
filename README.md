@@ -4,7 +4,7 @@
 
 <sup>1</sup> **nmj303@nyu.edu**
 <sup>2</sup> **rj1469@nyu.edu**
-%%%
+
 <!--
 ## 1 PROBLEM STATEMENT
 
